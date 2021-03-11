@@ -89,6 +89,8 @@
   </v-dialog>
 </template>
 <script>
+import { mapActions, mapGetters, mapState } from 'vuex'
+
 export default {
   name: 'ItemDialog',
 
@@ -100,8 +102,6 @@ export default {
       valid: false,
       /** 日付選択メニューの表示状態 */
       menu: false,
-      /** ローディング状態 */
-      loading: false,
 
       /** 操作タイプ 'add' or 'edit' */
       actionType: 'add',
@@ -147,6 +147,19 @@ export default {
   },
 
   computed: {
+    ...mapGetters([
+      /** 収支カテゴリ */
+      'incomeItems',
+      'outgoItems',
+      /** タグ */
+      'tagItems',
+    ]),
+
+    ...mapState({
+      /** ローディング状態 */
+      loading: (state) => state.loading.add || state.loading.update,
+    }),
+
     /** ダイアログのタイトル */
     titleText() {
       return this.actionType === 'add' ? 'データ追加' : 'データ編集'
@@ -158,6 +171,13 @@ export default {
   },
 
   methods: {
+    ...mapActions([
+      /** データ追加 */
+      'addAbData',
+      /** データ更新 */
+      'updateAbData',
+    ]),
+
     /**
      * ダイアログを表示します。
      * このメソッドは親から呼び出されます。
@@ -176,9 +196,28 @@ export default {
       this.show = false
     },
     /** 追加／更新がクリックされたとき */
-    onClickAction() {
-      // あとで実装
+    async onClickAction() {
+      const item = {
+        date: this.date,
+        title: this.title,
+        category: this.category,
+        tags: this.tags.join(','),
+        memo: this.memo,
+        income: null,
+        outgo: null,
+      }
+      item[this.inout] = this.amount || 0
+
+      if (this.actionType === 'add') {
+        await this.addAbData({ item })
+      } else {
+        item.id = this.id
+        this.updateAbData({ beforeYM: this.beforeYM, item })
+      }
+
+      this.show = false
     },
+
     /** 収支が切り替わったとき */
     onChangeInout() {
       if (this.inout === 'income') {
